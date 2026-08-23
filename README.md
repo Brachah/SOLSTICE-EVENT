@@ -1,5 +1,13 @@
-# SOLSTICE-EVENT
-Project Summary: QR Badge Scanner & Check-In System
+ASSIGNMENT ONE- INDEPENDENT APP
+Agricultural Decision Support System
+LIVE WORKING PROTOTYPE (WEB APP):
+https://script.google.com/macros/s/AKfycbyU1dFyzlFJIQGoGaIZdIZJbo89aR56Dpe5Nw3EyRfbQXYtwt2Ya3q_VRdHYplOSzk/exec
+
+ASSIGNMENT TWO # SOLSTICE-EVENT
+Project Summary: QR Code Scanner & Check-In System
+LIVE WORKING PROTOTYPE (WEB APP): 
+https://script.google.com/macros/s/AKfycbyrcgiKIuHnk3-uvQHH7Rg19f24xgmt7xcU6Qyp3Ysprb0UiZ4JSPMc34Z0N9FRsU_PhA/exec
+
 1. Project Overview
 This project is a fully functional, web-based event check-in and badge printing system built entirely on Google Apps Script (GAS). It allows event staff to manually enter or scan an attendee's QR code (ID), verify their registration against a Google Sheets database, prevent duplicate badge prints, and generate a formatted physical badge.
 Upon printing, the system automatically updates the database to mark the attendee as "Checked-In" and redirects the staff member back to the scanner to process the next person.
@@ -91,7 +99,7 @@ Physical Output: The screen flashes a green "✅ CHECKED-IN!" message, and the b
 Reset: After 1.5 seconds, the system automatically redirects back to the homepage, ready for the next attendee.
 
 
-
+Limitation: While highly effective for small to medium-sized events, this system is constrained by its reliance on Google Sheets and Google Apps Script, which introduces limitations in scalability, offline capability, and security. It requires a continuous internet connection to function, lacks built-in staff authentication, and may experience latency with massive attendee databases due to spreadsheet search limitations and server "cold starts." Furthermore, the system depends entirely on the browser's native print dialog, preventing direct, silent printing to specialized thermal label printers without manual user interaction.
 
 
 
