@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Style'); ?>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🎫 Solstice Events</h1>
+    <p>Enter or scan attendee QR code to verify & print badge</p>
+  </div>
+
+  <div class="container">
+    
+    <!-- ─── MANUAL ENTRY SECTION ───────────────── -->
+    <div id="scanner-section" class="card manual-entry-card">
+      <h2>🔍 Verify Attendee</h2>
+      <p class="subtitle">Type or scan the Attendee QR Code</p>
+      
+      <div class="manual-input-wrapper">
+        <input 
+          type="text" 
+          id="manualId" 
+          placeholder="Enter Attendee QR Code (e.g., 001)" 
+          autocomplete="off"
+          onkeypress="if(event.key === 'Enter') verifyAttendee()"
+        />
+        <button class="btn btn-primary btn-lg" onclick="verifyAttendee()">
+          Verify
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── STATUS MESSAGES ────────────────────── -->
+    <div id="statusMsg" class="status-msg" style="display:none;"></div>
+
+    <!-- ─── ATTENDEE INFO PREVIEW ──────────────── -->
+    <div id="attendeeInfo" class="card" style="display:none;">
+      <h2>✅ Attendee Verified</h2>
+      <div id="attendeeDetails"></div>
+      <button class="btn btn-success btn-lg" onclick="goToBadge()" style="margin-top: 20px;">
+        🖨️ Proceed to Print Badge
+      </button>
+    </div>
+  <h5>🔍 Solstice Events Co.: Check-In Kiosk Service</br> There are seven test attendees with QRCode range of A001 - A007, which includes unchecked and checked attendees</h5>
+  </div>
+
+  <?!= include('Script'); ?>
+  
+  <script>
+    let currentAttendee = null;
+
+    // ─── Core Logic: Verify Attendee ─────────────
+    function verifyAttendee() {
+      const idInput = document.getElementById('manualId');
+      const qrCode = idInput.value.trim();
+      
+      if (!qrCode) {
+        showStatus('❌ Please enter an Attendee QR Code.', 'error');
+        return;
+      }
+
+      showStatus('🔍 Verifying attendee...', 'info');
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result.success) {
+            showStatus('❌ ' + result.message, 'error');
+            setTimeout(resetPage, 3000);
+            return;
+          }
+          
+          currentAttendee = result.data;
+          
+          // ⚠️ CHECK: Badge already printed?
+          if (result.data.badgePrinted) {
+            showStatus(
+              '⚠️ <strong>DUPLICATE SCAN!</strong><br>Badge for <strong>' + 
+              result.data.name + '</strong> has already been printed.<br>Cannot print a second badge.', 
+              'warning'
+            );
+            setTimeout(resetPage, 4000);
+            return;
+          }
+          
+          // ✅ Show attendee info
+          hideStatus();
+          showAttendeeInfo(result.data);
+        })
+        .withFailureHandler(function(err) {
+          showStatus('Server error: ' + err.message, 'error');
+        })
+        .findAttendee(qrCode);
+    }
+
+    // ─── Show Attendee Info ──────────────────────
+    function showAttendeeInfo(data) {
+      document.getElementById('scanner-section').style.display = 'none';
+      
+      const ticketClass = data.ticketType === 'VIP' ? 'badge-vip' : 'badge-standard';
+      
+      document.getElementById('attendeeDetails').innerHTML = `
+        <div class="info-row"><span class="label">Name:</span> <strong>${data.name}</strong></div>
+        <div class="info-row"><span class="label">Email:</span> ${data.email}</div>
+        <div class="info-row"><span class="label">Company:</span> ${data.company}</div>
+        <div class="info-row">
+          <span class="label">Ticket:</span> 
+          <span class="ticket-tag ${ticketClass}">${data.ticketType}</span>
+        </div>
+        <div class="info-row"><span class="label">ID:</span> ${data.id}</div>
+      `;
+      
+      document.getElementById('attendeeInfo').style.display = 'block';
+    }
+
+    // ─── Navigate to Badge Page ──────────────────
+    function goToBadge() {
+       if (!currentAttendee) {
+      alert('Error: No attendee data found. Please verify again.');
+      return;
+      }
+      //const url = ScriptApp.getService().getUrl() + '?page=badge&id=' + encodeURIComponent(currentAttendee.id);
+      // 1. Ask the server for the absolute Web App URL
+    google.script.run
+    .withSuccessHandler(function(baseUrl) {
+      // 2. Build the full URL with parameters
+      const targetUrl = baseUrl + '?page=badge&id=' + encodeURIComponent(currentAttendee.id);
+      
+      // 3. Use window.top to break out of the GAS iframe and navigate
+      window.top.location.href = targetUrl;
+    })
+    .withFailureHandler(function(err) {
+      console.error('Navigation failed:', err);
+      alert('Could not navigate to badge page.');
+    })
+    .getWebAppUrl(); // Calls the function we just added to Code.gs
+    }
+
+    // ─── Helpers ─────────────────────────────────
+    function resetPage() {
+      currentAttendee = null;
+      document.getElementById('scanner-section').style.display = 'block';
+      document.getElementById('attendeeInfo').style.display = 'none';
+      document.getElementById('manualId').value = '';
+      document.getElementById('manualId').focus(); // Auto-focus for next scan
+      hideStatus();
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('statusMsg');
+      el.innerHTML = msg;
+      el.className = 'status-msg status-' + type;
+      el.style.display = 'block';
+    }
+
+    function hideStatus() {
+      document.getElementById('statusMsg').style.display = 'none';
+    }
+
+    // Auto-focus input on page load
+    window.onload = function() {
+      document.getElementById('manualId').focus();
+    };
+  </script>
+
+</body>
+</html>
