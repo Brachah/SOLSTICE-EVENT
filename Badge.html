@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Style'); ?>
+  <style>
+    /* ─── Badge Print Styles ─────────────────── */
+    .badge-container { display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    .badge-card {
+      width: 350px; min-height: 500px; border: 3px solid #333; border-radius: 16px;
+      overflow: hidden; background: #black; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .badge-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff; padding: 24px 20px; text-align: center;
+    }
+    .badge-header h2 { margin: 0; font-size: 22px; letter-spacing: 1px; }
+    .badge-header p { margin: 4px 0 0; font-size: 13px; opacity: 0.85; }
+    .badge-body { padding: 24px 20px; text-align: center; }
+    .badge-avatar {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; font-weight: bold; margin: 0 auto 16px;
+    }
+    .badge-name { font-size: 24px; font-weight: 700; color: #222; margin: 0 0 6px; }
+    .badge-company { font-size: 15px; color: #666; margin: 0 0 16px; }
+    .badge-ticket {
+      display: inline-block; padding: 8px 28px; border-radius: 20px;
+      font-size: 16px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .badge-ticket.vip { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }
+    .badge-ticket.standard { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }
+    .badge-id { margin-top: 20px; font-size: 12px; color: #999; }
+    .badge-footer {
+      background: #f5f5f5; padding: 12px; text-align: center;
+      font-size: 11px; color: #888; border-top: 1px solid #eee;
+    }
+    .action-buttons { margin-top: 24px; display: flex; gap: 12px; width: 100%; max-width: 350px; }
+    
+    /* Checked-in success animation */
+    .checked-in-msg {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 10px;
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
+    }
+
+    /* ─── Print Styles ───────────────────────── */
+    @media print {
+      body * { visibility: hidden; }
+      .badge-card, .badge-card * { visibility: visible; }
+      .badge-card {
+        position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%, -50%); box-shadow: none; border: 2px solid #000;
+      }
+      .no-print { display: none !important; }
+      @page { margin: 1cm; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="badge-container">
+    <h2 class="no-print">🎫 Badge Preview</h2>
+    
+    <!-- ─── THE BADGE ─────────────────────────── -->
+    <div id="badgeCard" class="badge-card">
+      <div class="badge-header">
+        <h2>TECH CONFERENCE 2026</h2>
+        <p>Attendee Badge</p>
+      </div>
+      <div class="badge-body">
+        <div class="badge-avatar" id="badgeAvatar">?</div>
+        <div class="badge-name" id="badgeName">Loading...</div>
+        <div class="badge-company" id="badgeCompany">—</div>
+        <div class="badge-ticket" id="badgeTicket">—</div>
+        <div class="badge-id" id="badgeId">ID: —</div>
+      </div>
+      <div class="badge-footer">Please wear this badge at all times during the event.</div>
+    </div>
+    
+    <!-- ─── ACTION BUTTONS ────────────────────── -->
+    <div class="action-buttons no-print">
+      <button id="printBtn" class="btn btn-success btn-lg" onclick="printBadge()" style="flex:1;">
+        🖨️ Print & Check-In
+      </button>
+      <button class="btn btn-secondary btn-lg" onclick="goHome()" style="flex:1;">
+        🏠 Cancel
+      </button>
+    </div>
+    
+    <!-- ─── STATUS MESSAGE ────────────────────── -->
+    <div id="printStatus" class="status-msg" style="display:none; margin-top:20px; width: 100%; max-width: 350px;"></div>
+  </div>
+
+  <script>
+  let attendeeData = null;
+  let rowIndex = null;
+
+  // FIX: Read the ID injected by the server-side Apps Script template.
+  // JSON.stringify ensures it's safely formatted as a JavaScript string.
+  const attendeeId = <?!= JSON.stringify(attendeeId) ?>;
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if (!attendeeId) {
+      showPrintStatus('❌ No attendee ID provided.', 'error');
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.success) {
+          showPrintStatus('❌ ' + result.message, 'error');
+          return;
+        }
+        if (result.data.badgePrinted) {
+          showPrintStatus('⚠️ Badge already printed! Redirecting...', 'warning');
+          setTimeout(goHome, 2500);
+          return;
+        }
+        attendeeData = result.data;
+        rowIndex = result.rowIndex;
+        renderBadge(result.data);
+      })
+      .withFailureHandler(function(err) {
+        showPrintStatus('Error: ' + err.message, 'error');
+      })
+      .findAttendee(attendeeId);
+  });
+
+  // FIX: Added safety checks (|| '—') so it doesn't crash if a Sheet cell is empty
+  function renderBadge(data) {
+    const name = data.name || 'Unknown Name';
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    
+    document.getElementById('badgeAvatar').textContent = initials || '?';
+    document.getElementById('badgeName').textContent = name;
+    document.getElementById('badgeCompany').textContent = data.company || '—';
+    document.getElementById('badgeId').textContent = 'ID: ' + (data.id || '—');
+    
+    const ticketEl = document.getElementById('badgeTicket');
+    ticketEl.textContent = data.ticketType || 'Standard';
+    ticketEl.className = 'badge-ticket ' + (data.ticketType === 'VIP' ? 'vip' : 'standard');
+  }
+
+  // ─── Print Badge & Check-In ────────────────
+  function printBadge() {
+    const printBtn = document.getElementById('printBtn');
+    printBtn.textContent = '⏳ Checking In...';
+    printBtn.disabled = true;
+    showPrintStatus('🔄 Updating database to Checked-In...', 'info');
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          showPrintStatus('✅ <span class="checked-in-msg">CHECKED-IN!</span><br>Database updated to TRUE.', 'success');
+          printBtn.textContent = '✅ Checked-In';
+          
+          setTimeout(function() {
+            window.print();
+            setTimeout(goHome, 1500); 
+          }, 800);
+        } else {
+          showPrintStatus('❌ Failed to update database: ' + result.message, 'error');
+          printBtn.textContent = '🖨️ Print & Check-In';
+          printBtn.disabled = false;
+        }
+      })
+      .withFailureHandler(function(err) {
+        showPrintStatus('❌ Server Error: ' + err.message, 'error');
+        printBtn.textContent = '🖨️ Print & Check-In';
+        printBtn.disabled = false;
+      })
+      .markBadgePrinted(rowIndex);
+  }
+
+  // ─── Navigation ────────────────────────────
+  function goHome() {
+    google.script.run
+      .withSuccessHandler(function(baseUrl) {
+        window.top.location.href = baseUrl;
+      })
+      .getWebAppUrl();
+  }
+
+  // ─── Helpers ───────────────────────────────
+  function showPrintStatus(msg, type) {
+    const el = document.getElementById('printStatus');
+    el.innerHTML = msg;
+    el.className = 'status-msg status-' + type;
+    el.style.display = 'block';
+  }
+  </script>
+  </body>
+</html>
