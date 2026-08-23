@@ -8,6 +8,7 @@ Project Summary: QR Code Scanner & Check-In System
 LIVE WORKING PROTOTYPE (WEB APP): 
 https://script.google.com/macros/s/AKfycbyrcgiKIuHnk3-uvQHH7Rg19f24xgmt7xcU6Qyp3Ysprb0UiZ4JSPMc34Z0N9FRsU_PhA/exec
 
+Test Attendees: A001 to A007
 1. Project Overview
 This project is a fully functional, web-based event check-in and badge printing system built entirely on Google Apps Script (GAS). It allows event staff to manually enter or scan an attendee's QR code (ID), verify their registration against a Google Sheets database, prevent duplicate badge prints, and generate a formatted physical badge.
 Upon printing, the system automatically updates the database to mark the attendee as "Checked-In" and redirects the staff member back to the scanner to process the next person.
